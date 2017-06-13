@@ -50,6 +50,8 @@ app.use((req, res, next) => {
     res.locals.pageTitle = app.locals.defaultTitle;
     res.locals.pagePath = req.path;
 
+    req.db = mongodb;
+
     next();
 });
 
