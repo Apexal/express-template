@@ -11,13 +11,10 @@ const recursiveReadSync = require('recursive-readdir-sync');
 const session = require('express-session');
 const config = require('./server/config.js');
 const package = require('./package.json');
-
-const passport = require('./server/modules/auth.js')();
-//const GoogleStrategy = require('passport-google-oauth20').Strategy;
-
-const mongodb = require('./server/modules/mongodb.js');
+const mongodb = require('./server/db');
 
 const app = express();
+const passport = require('./server/modules/auth.js')(mongodb.User);
 
 // View engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -34,7 +31,7 @@ app.use(session({
   secret: config.secret,
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: true, maxAge: 1000 * 60 * 60 * 5 }
+  cookie: { maxAge: 1000 * 60 * 60 * 5 }
 }))
 app.use(passport.initialize());
 app.use(passport.session());
@@ -54,8 +51,12 @@ app.locals.appDescription = package.description;
 app.use((req, res, next) => {
     res.locals.pageTitle = app.locals.defaultTitle;
     res.locals.pagePath = req.path;
-
     req.db = mongodb;
+    
+    if (req.user)
+        res.locals.user = req.user;
+
+    res.locals.loggedIn = req.isAuthenticated();
 
     next();
 });
@@ -71,8 +72,9 @@ isLoggedIn = function(req, res, next) {
 app.get('/auth/google', passport.authenticate('google', { scope : ['profile', 'email'] }));
 app.get('/auth/google/callback',
     passport.authenticate('google', {
-        successRedirect : '/profile',
-        failureRedirect : '/'
+        successRedirect: '/',
+        failureRedirect: '/',
+        failureFlash: true
     }));
 
 // Dynamically load routes
