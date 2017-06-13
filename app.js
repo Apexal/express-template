@@ -75,7 +75,18 @@ app.get('/auth/google/callback',
         successRedirect: '/',
         failureRedirect: '/',
         failureFlash: true
-    }));
+    }),
+    (req, res) => {
+        if (req.session.redirect !== undefined) {
+            // Redirect to page after login if specified
+            const redir = req.session['redirect'];
+
+            delete req.session['redirect'];
+            req.session['redirect'] = undefined;
+            
+            res.redirect(redir);
+        }
+    });
 
 // Dynamically load routes
 const routePath = path.join(__dirname, 'server/routes') + '/';
