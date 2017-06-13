@@ -12,6 +12,9 @@ const session = require('express-session');
 const config = require('./server/config.js');
 const package = require('./package.json');
 
+const passport = require('./server/modules/auth.js')();
+//const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
 const mongodb = require('./server/modules/mongodb.js');
 
 const app = express();
@@ -33,6 +36,8 @@ app.use(session({
   saveUninitialized: true,
   cookie: { secure: true, maxAge: 1000 * 60 * 60 * 5 }
 }))
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'client/public')));
 
 // View helper methods
@@ -54,6 +59,21 @@ app.use((req, res, next) => {
 
     next();
 });
+
+// To be used by routes
+isLoggedIn = function(req, res, next) {
+    // if user is authenticated in the session, carry on
+    if (req.isAuthenticated()) return next();
+
+    res.redirect('/');
+}
+
+app.get('/auth/google', passport.authenticate('google', { scope : ['profile', 'email'] }));
+app.get('/auth/google/callback',
+    passport.authenticate('google', {
+        successRedirect : '/profile',
+        failureRedirect : '/'
+    }));
 
 // Dynamically load routes
 const routePath = path.join(__dirname, 'server/routes') + '/';
